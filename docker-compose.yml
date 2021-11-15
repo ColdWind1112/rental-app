@@ -1,0 +1,64 @@
+version: "3.8"
+services:
+  rental_app:
+    container_name: rental_app
+    build:
+      context: rental-library-backend
+      dockerfile: docker/php/Dockerfile
+    expose:
+      - 9000
+    volumes:
+      - ./rental-library-backend:/usr/src/app
+      - ./rental-library-backend/public:/usr/src/app/public
+    depends_on:
+      - rental_db
+    networks:
+      - app_network
+
+  rental_nginx:
+    container_name: rental_nginx
+    build:
+      context: rental-library-backend
+      dockerfile: docker/nginx/Dockerfile
+    volumes:
+    - ./rental-library-backend/public:/usr/src/app/public
+    ports:
+      - 8000:80
+    depends_on:
+      - rental_app
+    environment:
+      NGINX_FPM_HOST: rental_app
+      NGINX_ROOT: /usr/src/app/public
+    networks:
+      - app_network
+
+  rental_db:
+    container_name: rental_db
+    image: mysql:8.0.20
+    command: mysqld --default-authentication-plugin=mysql_native_password
+    restart: always
+    volumes:
+      - ./rental-library-backend/storage/db-data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: rental
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+    networks:
+      - app_network
+
+  rental_frontend:
+    container_name: rental_frontend
+    build:
+      context: rental-library-frontend
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
